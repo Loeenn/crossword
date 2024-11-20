@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кроссворд по ПЗ 4</title>
+    <link rel="stylesheet" href="/static/cross.css">
+</head>
+<body>
+    <h1>Кроссворд по ПЗ 4</h1>
+    <div class="container">
+        <div class="crossword-container">
+            <div class="crossword-background">
+                <table id="crossword"></table>
+            </div>
+        </div>
+        <div class="questions-container">
+            <h2>Вопросы</h2>
+            <div>
+                <h3>По горизонтали:</h3>
+                <ol id="horizontal-questions"></ol>
+            </div>
+            <div>
+                <h3>По вертикали:</h3>
+                <ol id="vertical-questions"></ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- Форма для ввода имени -->
+    <form id="user-form">
+        <label for="username">Введите ваше имя:</label>
+        <input type="text" id="username" name="username" placeholder="Ваше имя" required>
+        <button type="button" id="check-button">Проверить и отправить</button>
+    </form>
+
+    <!-- Кнопка для таблицы лидеров -->
+    <button id="leaderboard-button">Таблица лидеров</button>
+
+    <script src="/static/cross.js"></script>
+</body>
+</html>
