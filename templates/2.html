@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Генерация кроссворда</title>
+    <style>
+      table {
+        border-collapse: collapse;
+        margin: 20px auto;
+      }
+      td {
+        width: 20px;
+        height: 20px;
+        border: 1px solid #ccc;
+        text-align: center;
+        vertical-align: middle;
+        font-family: Arial, sans-serif;
+      }
+      #inputSection {
+        text-align: center;
+        margin: 20px;
+      }
+      textarea {
+        width: 80%;
+        height: 100px;
+        margin-bottom: 10px;
+      }
+      button {
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        margin: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 style="text-align: center">Dynamic Crossword Generator</h1>
+    <div id="inputSection">
+      <textarea
+        id="wordInput"
+        placeholder="Введите слова разделенные пробелами (e.g., технологии, груз, мультимодальность)"
+      ></textarea
+      ><br />
+      <button onclick="generateUserCrossword()">Generate Crossword</button>
+      <button onclick="submitCrossword()">Submit</button>
+    </div>
+    <table id="crossword"></table>
+    <script>
+    
+
+        
+      let currentCrossword = null;
+
+      function generateCrossword(words, timeLimit = 5000) {
+        const start = Date.now();
+        const crosswordSize = 20;
+        let bestCrossword = null;
+        let bestScore = -Infinity;
+
+        while (Date.now() - start < timeLimit) {
+          const crossword = createCrossword(words, crosswordSize);
+          const score = evaluateCrossword(crossword);
+
+          if (score > bestScore) {
+            bestScore = score;
+            bestCrossword = crossword;
+          }
+        }
+
+        return bestCrossword;
+      }
+
+      function createCrossword(words, size) {
+        const grid = Array.from({ length: size }, () => Array(size).fill(""));
+        const wordNumbers = Array.from({ length: size }, () =>
+          Array(size).fill(null)
+        );
+        let wordNumber = 1;
+        words = [...words].sort((a, b) => b.length - a.length);
+
+        function placeWord(word, x, y, isHorizontal) {
+          for (let i = 0; i < word.length; i++) {
+            const cx = isHorizontal ? x + i : x;
+            const cy = isHorizontal ? y : y + i;
+            grid[cy][cx] = word[i];
+            if (i === 0) wordNumbers[cy][cx] = wordNumber;
+          }
+          wordNumber++;
+        }
+
+        function canPlaceWord(word, x, y, isHorizontal) {
+          for (let i = 0; i < word.length; i++) {
+            const cx = isHorizontal ? x + i : x;
+            const cy = isHorizontal ? y : y + i;
+            if (cx < 0 || cy < 0 || cx >= size || cy >= size) return false;
+            if (grid[cy][cx] !== "" && grid[cy][cx] !== word[i]) return false;
+          }
+          return true;
+        }
+
+        function findBestPlacement(word) {
+          let bestPlacement = null;
+          let bestScore = -Infinity;
+
+          for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+              for (let isHorizontal of [true, false]) {
+                if (canPlaceWord(word, x, y, isHorizontal)) {
+                  const score = scorePlacement(word, x, y, isHorizontal);
+                  if (score > bestScore) {
+                    bestScore = score;
+                    bestPlacement = { x, y, isHorizontal };
+                  }
+                }
+              }
+            }
+          }
+
+          return bestPlacement;
+        }
+
+        function scorePlacement(word, x, y, isHorizontal) {
+          let intersections = 0;
+          let gridExpansion = 0;
+
+          for (let i = 0; i < word.length; i++) {
+            const cx = isHorizontal ? x + i : x;
+            const cy = isHorizontal ? y : y + i;
+
+            if (grid[cy][cx] === word[i]) intersections++;
+            if (grid[cy][cx] === "") gridExpansion++;
+          }
+
+          return intersections * 10 - gridExpansion;
+        }
+
+        const firstWord = words.shift();
+        placeWord(
+          firstWord,
+          Math.floor(size / 2 - firstWord.length / 2),
+          Math.floor(size / 2),
+          true
+        );
+
+        words.forEach((word) => {
+          const placement = findBestPlacement(word);
+          if (placement) {
+            placeWord(word, placement.x, placement.y, placement.isHorizontal);
+          }
+        });
+
+        return { grid, wordNumbers };
+      }
+
+      function evaluateCrossword(crossword) {
+        const placedWords = crossword.grid
+          .flat()
+          .filter((cell) => cell !== "").length;
+        const gridWidth = crossword.grid[0].length;
+        const gridHeight = crossword.grid.length;
+        const shapeScore = Math.abs(gridWidth - gridHeight);
+        return placedWords - shapeScore;
+      }
+
+      function renderCrossword(grid) {
+        const table = document.getElementById("crossword");
+        table.innerHTML = "";
+        grid.forEach((row) => {
+          const tr = document.createElement("tr");
+          row.forEach((cell) => {
+            const td = document.createElement("td");
+            td.textContent = cell;
+            tr.appendChild(td);
+          });
+          table.appendChild(tr);
+        });
+      }
+
+      function generateUserCrossword() {
+        const wordInput = document.getElementById("wordInput").value;
+        const words = wordInput
+          .split(",")
+          .map((word) => word.trim().toUpperCase());
+        currentCrossword = generateCrossword(words);
+        console.log(currentCrossword.grid);
+        console.log(currentCrossword.wordNumbers);
+        renderCrossword(currentCrossword.grid);
+      }
+
+      function submitCrossword() {
+        if (!currentCrossword) {
+          alert("Сперва сгенерируйте кроссворд!");
+          return;
+        }
+        const wordNumbersList = currentCrossword.wordNumbers.map((row) => [
+          ...row,
+        ]);
+
+        fetch("/save_crossword/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: "crossword",
+            crossword: currentCrossword.grid,
+            nums: wordNumbersList,
+          }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            console.log("Ваш кроссворд успешно сохранён:", data);
+            alert("Ваш кроссворд успешно сохранён!");
+          })
+          .catch((error) => {
+            console.error("Ошибка сохранения кроссворда:", error);
+            alert("Ошибка сохранения кроссворда!");
+          });
+      }
+    </script>
+  </body>
+</html>
