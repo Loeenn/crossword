@@ -1,42 +1,283 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Кроссворд по ПЗ 4</title>
-    <link rel="stylesheet" href="/static/cross.css">
-</head>
-<body>
+    <link rel="stylesheet" href="/static/cross.css" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f4f9;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        height: 100vh;
+        color: #333;
+      }
+
+      h1 {
+        text-align: center;
+        color: #444;
+      }
+
+      .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 1200px;
+        padding: 20px;
+        background: white;
+        border: 1px solid #ccc;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+      }
+
+      .crossword-container {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      .crossword-background {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 80%;
+        max-width: 900px;
+        aspect-ratio: 1;
+      }
+
+      table td {
+        border: 1px solid #444;
+        text-align: center;
+        vertical-align: middle;
+        position: relative;
+        background-color: #ccc;
+        width: 40px;
+        height: 40px;
+      }
+
+      table td.filled {
+        background-color: #fff;
+      }
+
+      table td.empty {
+        background-color: #f4f4f9;
+      }
+
+      table td input {
+        width: 100%;
+        height: 100%;
+        border: none;
+        text-align: center;
+        font-size: 1.5em;
+        font-weight: bold;
+        background: none;
+        outline: none;
+      }
+
+      .questions-container {
+        width: 100%;
+        margin-top: 20px;
+        padding: 10px;
+        background: #eaf4ff;
+        border-radius: 10px;
+        border: 1px solid #bcd6f2;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .questions-container h2 {
+        text-align: center;
+        margin-bottom: 10px;
+      }
+
+      .highlight {
+        background-color: #fffa9e;
+        font-weight: bold;
+      }
+
+      .navigate-btn {
+    margin: 10px 0;
+    padding: 12px 25px;
+    background: linear-gradient(135deg, #6a11cb, #2575fc);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+  }
+
+  .navigate-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(135deg, #2575fc, #6a11cb);
+  }
+
+  .navigate-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+    </style>
+  </head>
+  <body>
     <h1>Кроссворд по ПЗ 4</h1>
+    <button class="navigate-btn"  onclick="window.location.href='/create_crossword'">
+        Перейти к созданию кроссворда
+      </button>
     <div class="container">
-        <div class="crossword-container">
-            <div class="crossword-background">
-                <table id="crossword"></table>
-            </div>
+      <div class="crossword-container">
+        <div class="crossword-background">
+          <table id="crossword"></table>
         </div>
-        <div class="questions-container">
-            <h2>Вопросы</h2>
-            <div>
-                <h3>По горизонтали:</h3>
-                <ol id="horizontal-questions"></ol>
-            </div>
-            <div>
-                <h3>По вертикали:</h3>
-                <ol id="vertical-questions"></ol>
-            </div>
+      </div>
+      <div class="questions-container">
+        <h2>Вопросы</h2>
+        <div>
+          <h3>По горизонтали:</h3>
+          <ol id="horizontal-questions"></ol>
         </div>
+        <div>
+          <h3>По вертикали:</h3>
+          <ol id="vertical-questions"></ol>
+        </div>
+      </div>
     </div>
 
-    <!-- Форма для ввода имени -->
     <form id="user-form">
-        <label for="username">Введите ваше имя:</label>
-        <input type="text" id="username" name="username" placeholder="Ваше имя" required>
-        <button type="button" id="check-button">Проверить и отправить</button>
+      <label for="username">Введите ваше имя:</label>
+      <input
+        type="text"
+        id="username"
+        name="username"
+        placeholder="Ваше имя"
+        required
+      />
+      <button class="navigate-btn" id="check-button">Проверить и отправить</button>
     </form>
 
-    <!-- Кнопка для таблицы лидеров -->
-    <button id="leaderboard-button">Таблица лидеров</button>
+    <script>
+      let crosswordData = [];
+      let answers = [];
+      let questionNumbers = [];
 
-    <script src="/static/cross.js"></script>
-</body>
+      // Fetch crossword data and initialize crossword and questions
+      const fetchData = async () => {
+        try {
+          const response = await fetch("/api/crossword");
+          const data = await response.json();
+          console.log(data);
+
+          crosswordData = data.crossword;
+          answers = data.crossword;
+          questionNumbers = data.nums;
+          createCrossword();
+          addQuestions();
+        } catch (error) {
+          console.error("Ошибка загрузки данных:", error);
+          alert("Ошибка загрузки данных.");
+        }
+      };
+
+      const createCrossword = () => {
+        const table = document.getElementById("crossword");
+
+        crosswordData.forEach((row, i) => {
+          const tr = document.createElement("tr");
+          row.forEach((cell, j) => {
+            const td = document.createElement("td");
+
+            if (cell) {
+              td.classList.add("filled");
+
+              const span = document.createElement("span");
+              span.textContent = questionNumbers[i][j];
+              span.classList.add("question-number");
+              td.appendChild(span);
+
+              const input = document.createElement("input");
+              input.setAttribute("maxlength", 1);
+              input.dataset.row = i;
+              input.dataset.col = j;
+              input.addEventListener("focus", () => highlightQuestion(i, j));
+              input.addEventListener("blur", removeHighlight);
+              td.appendChild(input);
+            } else {
+              td.classList.add("empty");
+            }
+            tr.appendChild(td);
+          });
+          table.appendChild(tr);
+        });
+      };
+
+      const addQuestions = () => {
+        const horizontalQuestions = [
+          {
+            id: "h1",
+            text: "Участок водного пути, соединяющий транзитный ход с акваторией порта.",
+          },
+          {
+            id: "h2",
+            text: "Часть территории порта, где размещены здания управления и стоянки автомобилей.",
+          },
+        ];
+        const verticalQuestions = [
+          {
+            id: "v1",
+            text: "Акватория чего используется для стоянки судов под грузовыми операциями.",
+          },
+          {
+            id: "v2",
+            text: "Вид графика для координации работы мультимодальных систем.",
+          },
+        ];
+
+        const horizontalList = document.getElementById("horizontal-questions");
+        const verticalList = document.getElementById("vertical-questions");
+
+        horizontalQuestions.forEach((q) => {
+          const li = document.createElement("li");
+          li.id = q.id;
+          li.textContent = q.text;
+          horizontalList.appendChild(li);
+        });
+
+        verticalQuestions.forEach((q) => {
+          const li = document.createElement("li");
+          li.id = q.id;
+          li.textContent = q.text;
+          verticalList.appendChild(li);
+        });
+      };
+
+      const highlightQuestion = (row, col) => {
+        removeHighlight();
+        if (row === 1) document.getElementById("h2").classList.add("highlight");
+        if (col === 1) document.getElementById("v1").classList.add("highlight");
+      };
+
+      const removeHighlight = () => {
+        document
+          .querySelectorAll("li")
+          .forEach((li) => li.classList.remove("highlight"));
+      };
+
+      document.addEventListener("DOMContentLoaded", fetchData);
+    </script>
+  </body>
 </html>
